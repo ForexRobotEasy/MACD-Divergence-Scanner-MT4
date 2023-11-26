@@ -1,0 +1,104 @@
+mql5
+//+------------------------------------------------------------------+
+//|                                                 MACD Divergence Scanner MT4 |
+//|                             Copyright © 2021 forexroboteasy.com |
+//|                                             Developed by Forex Robot Easy Team |
+//+------------------------------------------------------------------+
+
+// Define input parameters
+input int ScanPeriod = 14; // Period for scanning divergences
+input double DivergenceThreshold = 0.0002; // Threshold for identifying divergences
+
+// Define global variables
+bool isScanning = false; // Flag to check if scanning is in progress
+
+//+------------------------------------------------------------------+
+//| Custom indicator initialization function                                   |
+//+------------------------------------------------------------------+
+int OnInit()
+{
+    // Enable the necessary indicators
+    IndicatorSetString(INDICATOR_SHORTNAME, 'MACD Divergence Scanner MT4');
+    IndicatorSetString(INDICATOR_DESCRIPTION, 'Scans for MACD divergences on multiple symbols and timeframes');
+    
+    return(INIT_SUCCEEDED);
+}
+
+//+------------------------------------------------------------------+
+//| Custom indicator deinitialization function                                 |
+//+------------------------------------------------------------------+
+void OnDeinit(const int reason)
+{
+    // Perform any necessary cleanup tasks here
+}
+
+//+------------------------------------------------------------------+
+//| Custom indicator calculation function                                      |
+//+------------------------------------------------------------------+
+int OnCalculate(const int rates_total,
+                const int prev_calculated,
+                const datetime &time[],
+                const double &open[],
+                const double &high[],
+                const double &low[],
+                const double &close[],
+                const long &tick_volume[],
+                const long &volume[],
+                const int &spread[])
+{
+    // Check if scanning is in progress
+    if(isScanning)
+        return(rates_total);
+    
+    // Start scanning
+    isScanning = true;
+    
+    // Loop through all selected symbols
+    for(int symbol = 0; symbol < SymbolsTotal(); symbol++)
+    {
+        // Loop through all selected timeframes
+        for(int timeframe = 0; timeframe < PeriodsTotal(); timeframe++)
+        {
+            // Set the symbol and timeframe
+            SymbolSelect(SymbolName(symbol), true);
+            PeriodSelect(PeriodName(timeframe));
+            
+            // Calculate MACD values
+            double macd_main_buffer[];
+            double macd_signal_buffer[];
+            double macd_histogram_buffer[];
+            
+            ArraySetAsSeries(macd_main_buffer, true);
+            ArraySetAsSeries(macd_signal_buffer, true);
+            ArraySetAsSeries(macd_histogram_buffer, true);
+            
+            int calculated = iMACD(SymbolName(symbol), Period(), 12, 26, 9, PRICE_CLOSE,
+                                  macd_main_buffer, macd_signal_buffer, macd_histogram_buffer);
+            
+            // Loop through all bars
+            for(int bar = 1; bar < calculated; bar++)
+            {
+                // Check for bullish divergence
+                if((macd_main_buffer[bar] - macd_signal_buffer[bar]) > DivergenceThreshold &&
+                   (macd_main_buffer[bar-1] - macd_signal_buffer[bar-1]) <= DivergenceThreshold)
+                {
+                    // Perform action for bullish divergence
+                    // Add necessary code here
+                }
+                
+                // Check for bearish divergence
+                if((macd_main_buffer[bar] - macd_signal_buffer[bar]) < -DivergenceThreshold &&
+                   (macd_main_buffer[bar-1] - macd_signal_buffer[bar-1]) >= -DivergenceThreshold)
+                {
+                    // Perform action for bearish divergence
+                    // Add necessary code here
+                }
+            }
+        }
+    }
+    
+    // Scanning complete
+    isScanning = false;
+    
+    return(rates_total);
+}
